@@ -1,0 +1,8 @@
+# Project exclude paths
+/.gradle/
+/build/
+/util/build/
+/Watermark/task/build/
+/Watermark/task/out/
+/Watermark/task/out/production/classes/
+/Watermark/task/out/test/classes/
