@@ -1,6 +1,5 @@
 package watermark
 
-import java.awt.Color
 import java.awt.Transparency
 import java.awt.image.BufferedImage
 import java.io.File
@@ -9,7 +8,7 @@ import javax.imageio.ImageIO
 sealed class BlendMode {
     data object Default: BlendMode()
     data object Transparency: BlendMode()
-    data class KeyColor(val color: Color): BlendMode()
+    data class KeyColor(val value: PackedPixel): BlendMode()
 }
 
 sealed class Position {
@@ -31,7 +30,7 @@ fun BufferedImage.composeAtop(
 
     for (y in 0 ..< baseImage.height) {
         for (x in 0 ..< baseImage.width) {
-            val baseColor = Color(baseImage.getRGB(x, y))
+            val baseColor: PackedPixel = baseImage.getRGB(x, y)
 
             val (topX, topY) = when (position) {
                 is Position.Offset -> {
@@ -45,31 +44,28 @@ fun BufferedImage.composeAtop(
             }
 
             if (topX == -1 || topY == -1) {
-                outputImage.setRGB(x, y, baseColor.rgb)
+                outputImage.setRGB(x, y, baseColor)
                 continue
             }
 
-            val topColor = Color(this.getRGB(topX, topY), true)
+            val topColor: PackedPixel = this.getRGB(topX, topY)
 
             val outputColor = when (blendMode) {
                 BlendMode.Transparency -> {
                     if (topColor.alpha == 0) baseColor else null
                 }
                 is BlendMode.KeyColor -> {
-                    val keyColor = blendMode.color
-                    if (topColor.red == keyColor.red &&
-                        topColor.green == keyColor.green &&
-                        topColor.blue == keyColor.blue
-                    ) baseColor else null
+                    val keyColor = blendMode.value
+                    if (topColor == keyColor) baseColor else null
                 }
                 BlendMode.Default -> null
-            } ?: Color(
-                (weight * topColor.red + (100 - weight) * baseColor.red) / 100,
-                (weight * topColor.green + (100 - weight) * baseColor.green) / 100,
-                (weight * topColor.blue + (100 - weight) * baseColor.blue) / 100
+            } ?: PackedPixel.fromRGB(
+                red = (weight * topColor.red + (100 - weight) * baseColor.red) / 100,
+                green = (weight * topColor.green + (100 - weight) * baseColor.green) / 100,
+                blue = (weight * topColor.blue + (100 - weight) * baseColor.blue) / 100
             )
 
-            outputImage.setRGB(x, y, outputColor.rgb)
+            outputImage.setRGB(x, y, outputColor)
         }
     }
 
@@ -146,7 +142,7 @@ fun main() {
                 println("The transparency color input is invalid.")
                 return
             }
-            blendMode = BlendMode.KeyColor(Color(r, g, b))
+            blendMode = BlendMode.KeyColor(PackedPixel.fromRGB(red = r, green = g, blue = b))
         }
     }
 
